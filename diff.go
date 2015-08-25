@@ -14,7 +14,7 @@ const CONTEXT_DEFAULT = 3
 //var flag_b = flag.Bool("b", false, "Cause any amount of white space at the end of a line to be treated as a single <newline> (that is, the white-space characters preceding the <newline> are ignored) and other strings of white-space characters, not including <newline> characters, to compare equal.")
 //var flag_c = flag.Bool("c", false, "Produce output in a form that provides three lines of copied context.")
 //var flag_C = flag.Int("C", 0, "Produce output in a form that provides n lines of copied context (where n shall be interpreted as a positive decimal integer).")
-var flag_e = flag.Bool("e", false, "Produce output in a form suitable as input for the ed utility, which can then be used to convert file1 into file2.")
+//var flag_e = flag.Bool("e", false, "Produce output in a form suitable as input for the ed utility, which can then be used to convert file1 into file2.")
 
 //var flag_f = flag.Bool("f", false, "Produce output in an alternative form, similar in format to -e, but not intended to be suitable as input for the ed utility, and in the opposite order.")
 //var flag_r = flag.Bool("r", false, "Apply diff recursively to files and directories of the same name when file1 and file2 are both directories.")
@@ -53,13 +53,13 @@ func difffile(apath string, bpath string) error {
 	} else if *flag_u {
 		print_unified(cl, a, b, apath, bpath, CONTEXT_DEFAULT)
 	} else {
-		print_ed(cl, a, b)
+		print_default_diff(cl, a, b)
 	}
 
 	return nil
 }
 
-func print_ed(cl []diff.Change, a []string, b []string) {
+func print_default_diff(cl []diff.Change, a []string, b []string) {
 	for _, c := range cl {
 		if c.Del == 0 {
 			fmt.Printf("%sa%s\n", format_range_ed(c.A, c.Del), format_range_ed(c.B, c.Ins))
