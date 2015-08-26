@@ -49,11 +49,11 @@ func difffile(apath string, bpath string) error {
 
 	cl := diff.Strings(a, b)
 
-	if *flag_C >= 0 {
+	if hasflag("C") {
 		print_context_diff(cl, a, b, apath, bpath, *flag_C)
 	} else if *flag_c {
 		print_context_diff(cl, a, b, apath, bpath, CONTEXT_DEFAULT)
-	} else if *flag_U >= 0 {
+	} else if hasflag("U") {
 		print_unified_diff(cl, a, b, apath, bpath, *flag_U)
 	} else if *flag_u {
 		print_unified_diff(cl, a, b, apath, bpath, CONTEXT_DEFAULT)
@@ -62,6 +62,16 @@ func difffile(apath string, bpath string) error {
 	}
 
 	return nil
+}
+
+func hasflag(name string) bool {
+	found := false
+	flag.Visit(func (f *flag.Flag) {
+		if f.Name == name {
+			found = true
+		}
+	})
+	return found
 }
 
 func print_plain_diff(cl []diff.Change, a []string, b []string) {
