@@ -58,13 +58,13 @@ func difffile(apath string, bpath string) error {
 	} else if *flag_u {
 		print_unified_diff(cl, a, b, apath, bpath, CONTEXT_DEFAULT)
 	} else {
-		print_default_diff(cl, a, b)
+		print_plain_diff(cl, a, b)
 	}
 
 	return nil
 }
 
-func print_default_diff(cl []diff.Change, a []string, b []string) {
+func print_plain_diff(cl []diff.Change, a []string, b []string) {
 	for _, c := range cl {
 		if c.Del == 0 {
 			fmt.Printf("%sa%s\n", format_range_ed(c.A, c.Del), format_range_ed(c.B, c.Ins))
