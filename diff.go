@@ -5,7 +5,6 @@ import (
 	"flag"
 	"fmt"
 	"github.com/hattya/go.diff"
-	"log"
 	"os"
 )
 
@@ -32,7 +31,8 @@ func main() {
 
 	err := difffile(flag.Arg(0), flag.Arg(1))
 	if err != nil {
-		log.Fatal(err)
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(2)
 	}
 }
 
