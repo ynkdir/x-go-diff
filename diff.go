@@ -222,11 +222,11 @@ func print_context_head(apath string, bpath string) error {
 		return err
 	}
 	if *flag_utc {
-		fmt.Printf("*** %s\t%s\n", apath, as.ModTime().UTC().Format("Mon Jan 02 15:04:05 2006"))
-		fmt.Printf("--- %s\t%s\n", bpath, bs.ModTime().UTC().Format("Mon Jan 02 15:04:05 2006"))
+		fmt.Printf("*** %s\t%s\n", apath, as.ModTime().UTC().Format("Mon Jan _2 15:04:05 2006"))
+		fmt.Printf("--- %s\t%s\n", bpath, bs.ModTime().UTC().Format("Mon Jan _2 15:04:05 2006"))
 	} else {
-		fmt.Printf("*** %s\t%s\n", apath, as.ModTime().Format("Mon Jan 02 15:04:05 2006"))
-		fmt.Printf("--- %s\t%s\n", bpath, bs.ModTime().Format("Mon Jan 02 15:04:05 2006"))
+		fmt.Printf("*** %s\t%s\n", apath, as.ModTime().Format("Mon Jan _2 15:04:05 2006"))
+		fmt.Printf("--- %s\t%s\n", bpath, bs.ModTime().Format("Mon Jan _2 15:04:05 2006"))
 	}
 	return nil
 }
