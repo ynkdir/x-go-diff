@@ -156,7 +156,7 @@ func print_plain_diff(cl []diff.Change, al []string, bl []string) {
 func format_range_plain(start int, count int) string {
 	base := 1
 	if count == 0 {
-		return fmt.Sprintf("%d", count)
+		return fmt.Sprintf("%d", start)
 	} else if count == 1 {
 		return fmt.Sprintf("%d", base+start)
 	} else {
