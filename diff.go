@@ -6,11 +6,16 @@ import (
 	"fmt"
 	"github.com/hattya/go.diff"
 	"os"
+	"path/filepath"
+	"regexp"
 )
 
+const EXIT_NO_DIFFERENCE_WERE_FOUND = 0
+const EXIT_DIFFERENCE_WERE_FOUND = 1
+const EXIT_AN_ERROR_OCCURRED = 2
 const CONTEXT_DEFAULT = 3
 
-//var flag_b = flag.Bool("b", false, "Cause any amount of white space at the end of a line to be treated as a single <newline> (that is, the white-space characters preceding the <newline> are ignored) and other strings of white-space characters, not including <newline> characters, to compare equal.")
+var flag_b = flag.Bool("b", false, "Cause any amount of white space at the end of a line to be treated as a single <newline> (that is, the white-space characters preceding the <newline> are ignored) and other strings of white-space characters, not including <newline> characters, to compare equal.")
 var flag_c = flag.Bool("c", false, "Produce output in a form that provides three lines of copied context.")
 var flag_C = flag.Int("C", -1, "Produce output in a form that provides n lines of copied context (where n shall be interpreted as a positive decimal integer).")
 
@@ -26,80 +31,128 @@ func main() {
 
 	if flag.NArg() != 2 {
 		flag.Usage()
-		os.Exit(2)
+		os.Exit(EXIT_AN_ERROR_OCCURRED)
 	}
 
-	err := difffile(flag.Arg(0), flag.Arg(1))
+	difffound, err := run(flag.Arg(0), flag.Arg(1))
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
-		os.Exit(2)
+		os.Exit(EXIT_AN_ERROR_OCCURRED)
+	}
+
+	if difffound {
+		os.Exit(EXIT_DIFFERENCE_WERE_FOUND)
+	} else {
+		os.Exit(EXIT_NO_DIFFERENCE_WERE_FOUND)
 	}
 }
 
-func difffile(apath string, bpath string) error {
-	a, err := readfile(apath)
+func run(apath string, bpath string) (bool, error) {
+	ainfo, err := os.Stat(apath)
 	if err != nil {
-		return err
+		return false, err
 	}
 
-	b, err := readfile(bpath)
+	binfo, err := os.Stat(bpath)
 	if err != nil {
-		return err
+		return false, err
 	}
 
-	cl := diff.Strings(a, b)
+	if ainfo.IsDir() && binfo.IsDir() {
+		return diffdir(apath, bpath)
+	} else if ainfo.IsDir() {
+		return difffile(filepath.Join(apath, binfo.Name()), bpath)
+	} else if binfo.IsDir() {
+		return difffile(apath, filepath.Join(bpath, ainfo.Name()))
+	} else {
+		return difffile(apath, bpath)
+	}
+}
+
+func diffdir(apath string, bpath string) (bool, error) {
+	return false, fmt.Errorf("NOT IMPLEMENTED")
+}
+
+func difffile(apath string, bpath string) (bool, error) {
+	al, err := readfile(apath)
+	if err != nil {
+		return false, err
+	}
+
+	bl, err := readfile(bpath)
+	if err != nil {
+		return false, err
+	}
+
+	cl := diff.Strings(cmpfilter(al), cmpfilter(bl))
+	if len(cl) == 0 {
+		return false, nil
+	}
 
 	if hasflag("C") {
-		print_context_diff(cl, a, b, apath, bpath, *flag_C)
+		err := print_context_diff(cl, al, bl, apath, bpath, *flag_C)
+		if err != nil {
+			return false, err
+		}
 	} else if *flag_c {
-		print_context_diff(cl, a, b, apath, bpath, CONTEXT_DEFAULT)
+		err := print_context_diff(cl, al, bl, apath, bpath, CONTEXT_DEFAULT)
+		if err != nil {
+			return false, err
+		}
 	} else if hasflag("U") {
-		print_unified_diff(cl, a, b, apath, bpath, *flag_U)
+		err := print_unified_diff(cl, al, bl, apath, bpath, *flag_U)
+		if err != nil {
+			return false, err
+		}
 	} else if *flag_u {
-		print_unified_diff(cl, a, b, apath, bpath, CONTEXT_DEFAULT)
+		err := print_unified_diff(cl, al, bl, apath, bpath, CONTEXT_DEFAULT)
+		if err != nil {
+			return false, err
+		}
 	} else {
-		print_plain_diff(cl, a, b)
+		print_plain_diff(cl, al, bl)
 	}
 
-	return nil
+	return true, nil
 }
 
-func hasflag(name string) bool {
-	found := false
-	flag.Visit(func (f *flag.Flag) {
-		if f.Name == name {
-			found = true
+func cmpfilter(lines []string) []string {
+	alt := lines[:]
+	for i, _ := range alt {
+		if *flag_b {
+			re := regexp.MustCompile("[ \t]+")
+			alt[i] = re.ReplaceAllString(alt[i], " ")
 		}
-	})
-	return found
+	}
+	return alt
 }
 
-func print_plain_diff(cl []diff.Change, a []string, b []string) {
+func print_plain_diff(cl []diff.Change, al []string, bl []string) {
 	for _, c := range cl {
 		if c.Del == 0 {
-			fmt.Printf("%sa%s\n", format_range_ed(c.A, c.Del), format_range_ed(c.B, c.Ins))
-			for i := 0; i < c.Ins; i++ {
-				fmt.Printf("> %s\n", b[c.B+i])
+			fmt.Printf("%sa%s\n", format_range_plain(c.A, c.Del), format_range_plain(c.B, c.Ins))
+			for b := c.B; b < c.B+c.Ins; b++ {
+				fmt.Printf("> %s\n", bl[b])
 			}
 		} else if c.Ins == 0 {
-			fmt.Printf("%sd%s\n", format_range_ed(c.A, c.Del), format_range_ed(c.B, c.Ins))
-			for i := 0; i < c.Del; i++ {
-				fmt.Printf("< %s\n", a[c.A+i])
+			fmt.Printf("%sd%s\n", format_range_plain(c.A, c.Del), format_range_plain(c.B, c.Ins))
+			for a := c.A; a < c.A+c.Del; a++ {
+				fmt.Printf("< %s\n", al[a])
 			}
 		} else {
-			fmt.Printf("%sc%s\n", format_range_ed(c.A, c.Del), format_range_ed(c.B, c.Ins))
-			for i := 0; i < c.Del; i++ {
-				fmt.Printf("< %s\n", a[c.A+i])
+			fmt.Printf("%sc%s\n", format_range_plain(c.A, c.Del), format_range_plain(c.B, c.Ins))
+			for a := c.A; a < c.A+c.Del; a++ {
+				fmt.Printf("< %s\n", al[a])
 			}
 			fmt.Printf("---\n")
-			for i := 0; i < c.Ins; i++ {
-				fmt.Printf("> %s\n", b[c.B+i])
+			for b := c.B; b < c.B+c.Ins; b++ {
+				fmt.Printf("> %s\n", bl[b])
 			}
 		}
 	}
 }
 
-func format_range_ed(start int, count int) string {
+func format_range_plain(start int, count int) string {
 	base := 1
 	if count == 0 {
 		return fmt.Sprintf("%d", count)
@@ -110,51 +163,52 @@ func format_range_ed(start int, count int) string {
 	}
 }
 
-func print_context_diff(cl []diff.Change, a []string, b []string, apath string, bpath string, context int) {
-	print_context_head(apath, bpath)
-	i := 0
-	for i < len(cl) {
-		cstart := i
-		cend, astart, acount, bstart, bcount := make_hunk(cl, cstart, len(a), len(b), context)
+func print_context_diff(cl []diff.Change, al []string, bl []string, apath string, bpath string, context int) error {
+	err := print_context_head(apath, bpath)
+	if err != nil {
+		return err
+	}
+	cstart := 0
+	for cstart < len(cl) {
+		cend, astart, acount, bstart, bcount := make_hunk(cl, cstart, len(al), len(bl), context)
 		fmt.Printf("***************\n")
 		fmt.Printf("*** %s ****\n", format_range_context(astart, acount))
-		lnum := astart
+		a := astart
 		for _, c := range cl[cstart : cend+1] {
-			for ; lnum < c.A; lnum++ {
-				fmt.Printf("  %s\n", a[lnum])
+			for ; a < c.A; a++ {
+				fmt.Printf("  %s\n", al[a])
 			}
-			for j := c.A; j < c.A+c.Del; j++ {
+			for ; a < c.A+c.Del; a++ {
 				if c.Ins == 0 {
-					fmt.Printf("- %s\n", a[j])
+					fmt.Printf("- %s\n", al[a])
 				} else {
-					fmt.Printf("! %s\n", a[j])
+					fmt.Printf("! %s\n", al[a])
 				}
-				lnum++
 			}
 		}
-		for ; lnum < astart+acount; lnum++ {
-			fmt.Printf("  %s\n", a[lnum])
+		for ; a < astart+acount; a++ {
+			fmt.Printf("  %s\n", al[a])
 		}
 		fmt.Printf("--- %s ----\n", format_range_context(bstart, bcount))
-		lnum = bstart
+		b := bstart
 		for _, c := range cl[cstart : cend+1] {
-			for ; lnum < c.B; lnum++ {
-				fmt.Printf("  %s\n", b[lnum])
+			for ; b < c.B; b++ {
+				fmt.Printf("  %s\n", bl[b])
 			}
-			for j := c.B; j < c.B+c.Ins; j++ {
+			for ; b < c.B+c.Ins; b++ {
 				if c.Del == 0 {
-					fmt.Printf("+ %s\n", b[j])
+					fmt.Printf("+ %s\n", bl[b])
 				} else {
-					fmt.Printf("! %s\n", b[j])
+					fmt.Printf("! %s\n", bl[b])
 				}
-				lnum++
 			}
 		}
-		for ; lnum < bstart+bcount; lnum++ {
-			fmt.Printf("  %s\n", b[lnum])
+		for ; b < bstart+bcount; b++ {
+			fmt.Printf("  %s\n", bl[b])
 		}
-		i = cend + 1
+		cstart = cend + 1
 	}
+	return nil
 }
 
 func print_context_head(apath string, bpath string) error {
@@ -180,6 +234,70 @@ func format_range_context(start int, count int) string {
 	} else {
 		return fmt.Sprintf("%d,%d", base+start, base+start+count-1)
 	}
+}
+
+func print_unified_diff(cl []diff.Change, al []string, bl []string, apath string, bpath string, context int) error {
+	err := print_unified_head(apath, bpath)
+	if err != nil {
+		return err
+	}
+	cstart := 0
+	for cstart < len(cl) {
+		cend, astart, acount, bstart, bcount := make_hunk(cl, cstart, len(al), len(bl), context)
+		fmt.Printf("@@ -%s +%s @@\n", format_range_unified(astart, acount), format_range_unified(bstart, bcount))
+		a := astart
+		for _, c := range cl[cstart : cend+1] {
+			for ; a < c.A; a++ {
+				fmt.Printf(" %s\n", al[a])
+			}
+			for ; a < c.A+c.Del; a++ {
+				fmt.Printf("-%s\n", al[a])
+			}
+			for b := c.B; b < c.B+c.Ins; b++ {
+				fmt.Printf("+%s\n", bl[b])
+			}
+		}
+		for ; a < astart+acount; a++ {
+			fmt.Printf(" %s\n", al[a])
+		}
+		cstart = cend + 1
+	}
+	return nil
+}
+
+func print_unified_head(apath string, bpath string) error {
+	as, err := os.Stat(apath)
+	if err != nil {
+		return err
+	}
+	bs, err := os.Stat(bpath)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("--- %s\t%s\n", apath, as.ModTime().Format("2006-01-02 15:04:05.000000000 -0700"))
+	fmt.Printf("+++ %s\t%s\n", bpath, bs.ModTime().Format("2006-01-02 15:04:05.000000000 -0700"))
+	return nil
+}
+
+func format_range_unified(start int, count int) string {
+	base := 1
+	if start == 0 && count == 0 {
+		return "0,0"
+	} else if count == 1 {
+		return fmt.Sprintf("%d", base+start)
+	} else {
+		return fmt.Sprintf("%d,%d", base+start, count)
+	}
+}
+
+func hasflag(name string) bool {
+	found := false
+	flag.Visit(func(f *flag.Flag) {
+		if f.Name == name {
+			found = true
+		}
+	})
+	return found
 }
 
 func make_hunk(cl []diff.Change, cstart int, alen int, blen int, context int) (cend, astart, acount, bstart, bcount int) {
@@ -213,58 +331,6 @@ func make_hunk(cl []diff.Change, cstart int, alen int, blen int, context int) (c
 	}
 
 	return
-}
-
-func print_unified_diff(cl []diff.Change, a []string, b []string, apath string, bpath string, context int) {
-	print_unified_head(apath, bpath)
-	i := 0
-	for i < len(cl) {
-		cstart := i
-		cend, astart, acount, bstart, bcount := make_hunk(cl, cstart, len(a), len(b), context)
-		fmt.Printf("@@ -%s +%s @@\n", format_range_unified(astart, acount), format_range_unified(bstart, bcount))
-		lnum := astart
-		for _, c := range cl[cstart : cend+1] {
-			for ; lnum < c.A; lnum++ {
-				fmt.Printf(" %s\n", a[lnum])
-			}
-			for j := c.A; j < c.A+c.Del; j++ {
-				fmt.Printf("-%s\n", a[j])
-				lnum++
-			}
-			for j := c.B; j < c.B+c.Ins; j++ {
-				fmt.Printf("+%s\n", b[j])
-			}
-		}
-		for ; lnum < astart+acount; lnum++ {
-			fmt.Printf(" %s\n", a[lnum])
-		}
-		i = cend + 1
-	}
-}
-
-func print_unified_head(apath string, bpath string) error {
-	as, err := os.Stat(apath)
-	if err != nil {
-		return err
-	}
-	bs, err := os.Stat(bpath)
-	if err != nil {
-		return err
-	}
-	fmt.Printf("--- %s\t%s\n", apath, as.ModTime().Format("2006-01-02 15:04:05.000000000 -0700"))
-	fmt.Printf("+++ %s\t%s\n", bpath, bs.ModTime().Format("2006-01-02 15:04:05.000000000 -0700"))
-	return nil
-}
-
-func format_range_unified(start int, count int) string {
-	base := 1
-	if start == 0 && count == 0 {
-		return "0,0"
-	} else if count == 1 {
-		return fmt.Sprintf("%d", base+start)
-	} else {
-		return fmt.Sprintf("%d,%d", base+start, count)
-	}
 }
 
 func readfile(path string) ([]string, error) {
