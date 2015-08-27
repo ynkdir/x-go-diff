@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
 )
 
 const EXIT_NO_DIFFERENCE_WERE_FOUND = 0
@@ -15,6 +16,7 @@ const EXIT_DIFFERENCE_WERE_FOUND = 1
 const EXIT_AN_ERROR_OCCURRED = 2
 const CONTEXT_DEFAULT = 3
 
+//http://pubs.opengroup.org/onlinepubs/9699919799/utilities/diff.html
 var flag_b = flag.Bool("b", false, "Cause any amount of white space at the end of a line to be treated as a single <newline> (that is, the white-space characters preceding the <newline> are ignored) and other strings of white-space characters, not including <newline> characters, to compare equal.")
 var flag_c = flag.Bool("c", false, "Produce output in a form that provides three lines of copied context.")
 var flag_C = flag.Int("C", -1, "Produce output in a form that provides n lines of copied context (where n shall be interpreted as a positive decimal integer).")
@@ -25,6 +27,9 @@ var flag_C = flag.Int("C", -1, "Produce output in a form that provides n lines o
 //var flag_r = flag.Bool("r", false, "Apply diff recursively to files and directories of the same name when file1 and file2 are both directories.")
 var flag_u = flag.Bool("u", false, "Produce output in a form that provides three lines of unified context.")
 var flag_U = flag.Int("U", -1, "Produce output in a form that provides n lines of unified context (where n shall be interpreted as a non-negative decimal integer).")
+
+var flag_i = flag.Bool("i", false, "Ignore changes in case of text.")
+
 var flag_utc = flag.Bool("utc", false, "Print time in UTC (for test)")
 
 func main() {
@@ -123,6 +128,9 @@ func cmpfilter(lines []string) []string {
 		if *flag_b {
 			re := regexp.MustCompile("[ \t]+")
 			alt[i] = re.ReplaceAllString(alt[i], " ")
+		}
+		if *flag_i {
+			alt[i] = strings.ToLower(alt[i])
 		}
 	}
 	return alt
