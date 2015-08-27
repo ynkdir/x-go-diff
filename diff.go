@@ -25,6 +25,7 @@ var flag_C = flag.Int("C", -1, "Produce output in a form that provides n lines o
 //var flag_r = flag.Bool("r", false, "Apply diff recursively to files and directories of the same name when file1 and file2 are both directories.")
 var flag_u = flag.Bool("u", false, "Produce output in a form that provides three lines of unified context.")
 var flag_U = flag.Int("U", -1, "Produce output in a form that provides n lines of unified context (where n shall be interpreted as a non-negative decimal integer).")
+var flag_utc = flag.Bool("utc", false, "Print time in UTC (for test)")
 
 func main() {
 	flag.Parse()
@@ -220,8 +221,13 @@ func print_context_head(apath string, bpath string) error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("*** %s\t%s\n", apath, as.ModTime().Format("Mon Jan 02 15:04:05 2006"))
-	fmt.Printf("--- %s\t%s\n", bpath, bs.ModTime().Format("Mon Jan 02 15:04:05 2006"))
+	if *flag_utc {
+		fmt.Printf("*** %s\t%s\n", apath, as.ModTime().UTC().Format("Mon Jan 02 15:04:05 2006"))
+		fmt.Printf("--- %s\t%s\n", bpath, bs.ModTime().UTC().Format("Mon Jan 02 15:04:05 2006"))
+	} else {
+		fmt.Printf("*** %s\t%s\n", apath, as.ModTime().Format("Mon Jan 02 15:04:05 2006"))
+		fmt.Printf("--- %s\t%s\n", bpath, bs.ModTime().Format("Mon Jan 02 15:04:05 2006"))
+	}
 	return nil
 }
 
@@ -274,8 +280,13 @@ func print_unified_head(apath string, bpath string) error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("--- %s\t%s\n", apath, as.ModTime().Format("2006-01-02 15:04:05.000000000 -0700"))
-	fmt.Printf("+++ %s\t%s\n", bpath, bs.ModTime().Format("2006-01-02 15:04:05.000000000 -0700"))
+	if *flag_utc {
+		fmt.Printf("--- %s\t%s\n", apath, as.ModTime().UTC().Format("2006-01-02 15:04:05.000000000 -0700"))
+		fmt.Printf("+++ %s\t%s\n", bpath, bs.ModTime().UTC().Format("2006-01-02 15:04:05.000000000 -0700"))
+	} else {
+		fmt.Printf("--- %s\t%s\n", apath, as.ModTime().Format("2006-01-02 15:04:05.000000000 -0700"))
+		fmt.Printf("+++ %s\t%s\n", bpath, bs.ModTime().Format("2006-01-02 15:04:05.000000000 -0700"))
+	}
 	return nil
 }
 
