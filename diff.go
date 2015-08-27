@@ -174,38 +174,52 @@ func print_context_diff(cl []diff.Change, al []string, bl []string, apath string
 		cend, astart, acount, bstart, bcount := make_hunk(cl, cstart, len(al), len(bl), context)
 		fmt.Printf("***************\n")
 		fmt.Printf("*** %s ****\n", format_range_context(astart, acount))
-		a := astart
+		hasdel := false
+		hasins := false
 		for _, c := range cl[cstart : cend+1] {
-			for ; a < c.A; a++ {
+			if c.Del != 0 {
+				hasdel = true
+			}
+			if c.Ins != 0 {
+				hasins = true
+			}
+		}
+		if hasdel {
+			a := astart
+			for _, c := range cl[cstart : cend+1] {
+				for ; a < c.A; a++ {
+					fmt.Printf("  %s\n", al[a])
+				}
+				for ; a < c.A+c.Del; a++ {
+					if c.Ins == 0 {
+						fmt.Printf("- %s\n", al[a])
+					} else {
+						fmt.Printf("! %s\n", al[a])
+					}
+				}
+			}
+			for ; a < astart+acount; a++ {
 				fmt.Printf("  %s\n", al[a])
 			}
-			for ; a < c.A+c.Del; a++ {
-				if c.Ins == 0 {
-					fmt.Printf("- %s\n", al[a])
-				} else {
-					fmt.Printf("! %s\n", al[a])
-				}
-			}
-		}
-		for ; a < astart+acount; a++ {
-			fmt.Printf("  %s\n", al[a])
 		}
 		fmt.Printf("--- %s ----\n", format_range_context(bstart, bcount))
-		b := bstart
-		for _, c := range cl[cstart : cend+1] {
-			for ; b < c.B; b++ {
-				fmt.Printf("  %s\n", bl[b])
-			}
-			for ; b < c.B+c.Ins; b++ {
-				if c.Del == 0 {
-					fmt.Printf("+ %s\n", bl[b])
-				} else {
-					fmt.Printf("! %s\n", bl[b])
+		if hasins {
+			b := bstart
+			for _, c := range cl[cstart : cend+1] {
+				for ; b < c.B; b++ {
+					fmt.Printf("  %s\n", bl[b])
+				}
+				for ; b < c.B+c.Ins; b++ {
+					if c.Del == 0 {
+						fmt.Printf("+ %s\n", bl[b])
+					} else {
+						fmt.Printf("! %s\n", bl[b])
+					}
 				}
 			}
-		}
-		for ; b < bstart+bcount; b++ {
-			fmt.Printf("  %s\n", bl[b])
+			for ; b < bstart+bcount; b++ {
+				fmt.Printf("  %s\n", bl[b])
+			}
 		}
 		cstart = cend + 1
 	}
