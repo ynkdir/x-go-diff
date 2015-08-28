@@ -128,9 +128,9 @@ func cmpfilter(lines []string) []string {
 	alt := lines[:]
 	for i, _ := range alt {
 		if *flag_b {
-			re1 := regexp.MustCompile("([ \t]+\r?|[ \t]*\r)\n$")
+			re1 := regexp.MustCompile("[ \t\r]*\n$")
 			alt[i] = re1.ReplaceAllString(alt[i], "\n")
-			re2 := regexp.MustCompile("[ \t]+$")
+			re2 := regexp.MustCompile("[ \t\r]*$")
 			alt[i] = re2.ReplaceAllString(alt[i], "")
 			re3 := regexp.MustCompile("[ \t]+")
 			alt[i] = re3.ReplaceAllString(alt[i], " ")
