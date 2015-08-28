@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/hattya/go.diff"
+	"io"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -15,6 +16,7 @@ const EXIT_NO_DIFFERENCE_WERE_FOUND = 0
 const EXIT_DIFFERENCE_WERE_FOUND = 1
 const EXIT_AN_ERROR_OCCURRED = 2
 const CONTEXT_DEFAULT = 3
+const NONEWLINE = "\\ No newline at end of file"
 
 //http://pubs.opengroup.org/onlinepubs/9699919799/utilities/diff.html
 var flag_b = flag.Bool("b", false, "Cause any amount of white space at the end of a line to be treated as a single <newline> (that is, the white-space characters preceding the <newline> are ignored) and other strings of white-space characters, not including <newline> characters, to compare equal.")
@@ -126,10 +128,12 @@ func cmpfilter(lines []string) []string {
 	alt := lines[:]
 	for i, _ := range alt {
 		if *flag_b {
-			re1 := regexp.MustCompile("[ \t]+$")
-			alt[i] = re1.ReplaceAllString(alt[i], "")
-			re2 := regexp.MustCompile("[ \t]+")
-			alt[i] = re2.ReplaceAllString(alt[i], " ")
+			re1 := regexp.MustCompile("([ \t]+\r?|[ \t]*\r)\n$")
+			alt[i] = re1.ReplaceAllString(alt[i], "\n")
+			re2 := regexp.MustCompile("[ \t]+$")
+			alt[i] = re2.ReplaceAllString(alt[i], "")
+			re3 := regexp.MustCompile("[ \t]+")
+			alt[i] = re3.ReplaceAllString(alt[i], " ")
 		}
 		if *flag_i {
 			alt[i] = strings.ToLower(alt[i])
@@ -143,21 +147,33 @@ func print_plain_diff(cl []diff.Change, al []string, bl []string) {
 		if c.Del == 0 {
 			fmt.Printf("%sa%s\n", format_range_plain(c.A, c.Del), format_range_plain(c.B, c.Ins))
 			for b := c.B; b < c.B+c.Ins; b++ {
-				fmt.Printf("> %s\n", bl[b])
+				fmt.Printf("> %s", bl[b])
+				if !strings.HasSuffix(bl[b], "\n") {
+					fmt.Printf("\n%s\n", NONEWLINE)
+				}
 			}
 		} else if c.Ins == 0 {
 			fmt.Printf("%sd%s\n", format_range_plain(c.A, c.Del), format_range_plain(c.B, c.Ins))
 			for a := c.A; a < c.A+c.Del; a++ {
-				fmt.Printf("< %s\n", al[a])
+				fmt.Printf("< %s", al[a])
+				if !strings.HasSuffix(al[a], "\n") {
+					fmt.Printf("\n%s\n", NONEWLINE)
+				}
 			}
 		} else {
 			fmt.Printf("%sc%s\n", format_range_plain(c.A, c.Del), format_range_plain(c.B, c.Ins))
 			for a := c.A; a < c.A+c.Del; a++ {
-				fmt.Printf("< %s\n", al[a])
+				fmt.Printf("< %s", al[a])
+				if !strings.HasSuffix(al[a], "\n") {
+					fmt.Printf("\n%s\n", NONEWLINE)
+				}
 			}
 			fmt.Printf("---\n")
 			for b := c.B; b < c.B+c.Ins; b++ {
-				fmt.Printf("> %s\n", bl[b])
+				fmt.Printf("> %s", bl[b])
+				if !strings.HasSuffix(bl[b], "\n") {
+					fmt.Printf("\n%s\n", NONEWLINE)
+				}
 			}
 		}
 	}
@@ -198,18 +214,27 @@ func print_context_diff(cl []diff.Change, al []string, bl []string, apath string
 			a := astart
 			for _, c := range cl[cstart : cend+1] {
 				for ; a < c.A; a++ {
-					fmt.Printf("  %s\n", al[a])
+					fmt.Printf("  %s", al[a])
+					if !strings.HasSuffix(al[a], "\n") {
+						fmt.Printf("\n%s\n", NONEWLINE)
+					}
 				}
 				for ; a < c.A+c.Del; a++ {
 					if c.Ins == 0 {
-						fmt.Printf("- %s\n", al[a])
+						fmt.Printf("- %s", al[a])
 					} else {
-						fmt.Printf("! %s\n", al[a])
+						fmt.Printf("! %s", al[a])
+					}
+					if !strings.HasSuffix(al[a], "\n") {
+						fmt.Printf("\n%s\n", NONEWLINE)
 					}
 				}
 			}
 			for ; a < astart+acount; a++ {
-				fmt.Printf("  %s\n", al[a])
+				fmt.Printf("  %s", al[a])
+				if !strings.HasSuffix(al[a], "\n") {
+					fmt.Printf("\n%s\n", NONEWLINE)
+				}
 			}
 		}
 		fmt.Printf("--- %s ----\n", format_range_context(bstart, bcount))
@@ -217,18 +242,27 @@ func print_context_diff(cl []diff.Change, al []string, bl []string, apath string
 			b := bstart
 			for _, c := range cl[cstart : cend+1] {
 				for ; b < c.B; b++ {
-					fmt.Printf("  %s\n", bl[b])
+					fmt.Printf("  %s", bl[b])
+					if !strings.HasSuffix(bl[b], "\n") {
+						fmt.Printf("\n%s\n", NONEWLINE)
+					}
 				}
 				for ; b < c.B+c.Ins; b++ {
 					if c.Del == 0 {
-						fmt.Printf("+ %s\n", bl[b])
+						fmt.Printf("+ %s", bl[b])
 					} else {
-						fmt.Printf("! %s\n", bl[b])
+						fmt.Printf("! %s", bl[b])
+					}
+					if !strings.HasSuffix(bl[b], "\n") {
+						fmt.Printf("\n%s\n", NONEWLINE)
 					}
 				}
 			}
 			for ; b < bstart+bcount; b++ {
-				fmt.Printf("  %s\n", bl[b])
+				fmt.Printf("  %s", bl[b])
+				if !strings.HasSuffix(bl[b], "\n") {
+					fmt.Printf("\n%s\n", NONEWLINE)
+				}
 			}
 		}
 		cstart = cend + 1
@@ -278,17 +312,29 @@ func print_unified_diff(cl []diff.Change, al []string, bl []string, apath string
 		a := astart
 		for _, c := range cl[cstart : cend+1] {
 			for ; a < c.A; a++ {
-				fmt.Printf(" %s\n", al[a])
+				fmt.Printf(" %s", al[a])
+				if !strings.HasSuffix(al[a], "\n") {
+					fmt.Printf("\n%s\n", NONEWLINE)
+				}
 			}
 			for ; a < c.A+c.Del; a++ {
-				fmt.Printf("-%s\n", al[a])
+				fmt.Printf("-%s", al[a])
+				if !strings.HasSuffix(al[a], "\n") {
+					fmt.Printf("\n%s\n", NONEWLINE)
+				}
 			}
 			for b := c.B; b < c.B+c.Ins; b++ {
-				fmt.Printf("+%s\n", bl[b])
+				fmt.Printf("+%s", bl[b])
+				if !strings.HasSuffix(bl[b], "\n") {
+					fmt.Printf("\n%s\n", NONEWLINE)
+				}
 			}
 		}
 		for ; a < astart+acount; a++ {
-			fmt.Printf(" %s\n", al[a])
+			fmt.Printf(" %s", al[a])
+			if !strings.HasSuffix(al[a], "\n") {
+				fmt.Printf("\n%s\n", NONEWLINE)
+			}
 		}
 		cstart = cend + 1
 	}
@@ -375,9 +421,19 @@ func readfile(path string) ([]string, error) {
 	}
 	defer f.Close()
 	var lines []string
-	scanner := bufio.NewScanner(f)
-	for scanner.Scan() {
-		lines = append(lines, scanner.Text())
+	r := bufio.NewReader(f)
+	for {
+		line, err := r.ReadString('\n')
+		if err != nil {
+			if err != io.EOF {
+				return nil, err
+			}
+			if line != "" {
+				lines = append(lines, line)
+			}
+			break
+		}
+		lines = append(lines, line)
 	}
-	return lines, scanner.Err()
+	return lines, nil
 }

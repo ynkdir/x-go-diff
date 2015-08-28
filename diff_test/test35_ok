@@ -1,0 +1,9 @@
+*** diff_test/test35_a	Fri Jan  2 03:04:05 2015
+--- diff_test/test35_b	Fri Jan  2 03:04:05 2015
+***************
+*** 1 ****
+! a
+\ No newline at end of file
+--- 1 ----
+! x
+\ No newline at end of file

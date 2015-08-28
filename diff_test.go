@@ -127,3 +127,48 @@ func Test26(t *testing.T) {
 func Test27(t *testing.T) {
 	dotest(t, []string{"-i", "diff_test/test27_a", "diff_test/test27_b"}, "diff_test/test27_ok")
 }
+func Test28(t *testing.T) {
+	dotest(t, []string{"-i", "diff_test/test28_a", "diff_test/test28_b"}, "diff_test/test28_ok")
+}
+func Test29(t *testing.T) {
+	dotest(t, []string{"-i", "diff_test/test29_a", "diff_test/test29_b"}, "diff_test/test29_ok")
+}
+func Test30(t *testing.T) {
+	dotest(t, []string{"-i", "diff_test/test30_a", "diff_test/test30_b"}, "diff_test/test30_ok")
+}
+func Test31(t *testing.T) {
+	dotest(t, []string{"-i", "diff_test/test31_a", "diff_test/test31_b"}, "diff_test/test31_ok")
+}
+func Test32(t *testing.T) {
+	dotest(t, []string{"diff_test/test32_a", "diff_test/test32_b"}, "diff_test/test32_ok")
+}
+func Test33(t *testing.T) {
+	dotest(t, []string{"diff_test/test33_a", "diff_test/test33_b"}, "diff_test/test33_ok")
+}
+func Test34(t *testing.T) {
+	dotest(t, []string{"diff_test/test34_a", "diff_test/test34_b"}, "diff_test/test34_ok")
+}
+func Test35(t *testing.T) {
+	dotest(t, []string{"-c", "diff_test/test35_a", "diff_test/test35_b"}, "diff_test/test35_ok")
+}
+func Test36(t *testing.T) {
+	dotest(t, []string{"-c", "diff_test/test36_a", "diff_test/test36_b"}, "diff_test/test36_ok")
+}
+func Test37(t *testing.T) {
+	dotest(t, []string{"-c", "diff_test/test37_a", "diff_test/test37_b"}, "diff_test/test37_ok")
+}
+func Test38(t *testing.T) {
+	dotest(t, []string{"-c", "diff_test/test38_a", "diff_test/test38_b"}, "diff_test/test38_ok")
+}
+func Test39(t *testing.T) {
+	dotest(t, []string{"-u", "diff_test/test39_a", "diff_test/test39_b"}, "diff_test/test39_ok")
+}
+func Test40(t *testing.T) {
+	dotest(t, []string{"-u", "diff_test/test40_a", "diff_test/test40_b"}, "diff_test/test40_ok")
+}
+func Test41(t *testing.T) {
+	dotest(t, []string{"-u", "diff_test/test41_a", "diff_test/test41_b"}, "diff_test/test41_ok")
+}
+func Test42(t *testing.T) {
+	dotest(t, []string{"-u", "diff_test/test42_a", "diff_test/test42_b"}, "diff_test/test42_ok")
+}
