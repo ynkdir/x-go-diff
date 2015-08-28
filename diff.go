@@ -19,16 +19,16 @@ const CONTEXT_DEFAULT = 3
 const NONEWLINE = "\\ No newline at end of file"
 
 //http://pubs.opengroup.org/onlinepubs/9699919799/utilities/diff.html
-var flag_b = flag.Bool("b", false, "Cause any amount of white space at the end of a line to be treated as a single <newline> (that is, the white-space characters preceding the <newline> are ignored) and other strings of white-space characters, not including <newline> characters, to compare equal.")
-var flag_c = flag.Bool("c", false, "Produce output in a form that provides three lines of copied context.")
-var flag_C = flag.Int("C", -1, "Produce output in a form that provides n lines of copied context (where n shall be interpreted as a positive decimal integer).")
+var flag_b = flag.Bool("b", false, "Ignore changes in amount of white space.")
+var flag_c = flag.Bool("c", false, "Context diff (three line context).")
+var flag_C = flag.Int("C", 0, "Context diff (specified line context).")
 
 //var flag_e = flag.Bool("e", false, "Produce output in a form suitable as input for the ed utility, which can then be used to convert file1 into file2.")
 
 //var flag_f = flag.Bool("f", false, "Produce output in an alternative form, similar in format to -e, but not intended to be suitable as input for the ed utility, and in the opposite order.")
 //var flag_r = flag.Bool("r", false, "Apply diff recursively to files and directories of the same name when file1 and file2 are both directories.")
-var flag_u = flag.Bool("u", false, "Produce output in a form that provides three lines of unified context.")
-var flag_U = flag.Int("U", -1, "Produce output in a form that provides n lines of unified context (where n shall be interpreted as a non-negative decimal integer).")
+var flag_u = flag.Bool("u", false, "Unified diff (three line context).")
+var flag_U = flag.Int("U", 0, "Unified diff (specified line context).")
 
 var flag_i = flag.Bool("i", false, "Ignore changes in case of text.")
 
