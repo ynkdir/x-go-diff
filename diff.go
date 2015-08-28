@@ -147,33 +147,21 @@ func print_plain_diff(cl []diff.Change, al []string, bl []string) {
 		if c.Del == 0 {
 			fmt.Printf("%sa%s\n", format_range_plain(c.A, c.Del), format_range_plain(c.B, c.Ins))
 			for b := c.B; b < c.B+c.Ins; b++ {
-				fmt.Printf("> %s", bl[b])
-				if !strings.HasSuffix(bl[b], "\n") {
-					fmt.Printf("\n%s\n", NONEWLINE)
-				}
+				print_line(fmt.Sprintf("> %s", bl[b]))
 			}
 		} else if c.Ins == 0 {
 			fmt.Printf("%sd%s\n", format_range_plain(c.A, c.Del), format_range_plain(c.B, c.Ins))
 			for a := c.A; a < c.A+c.Del; a++ {
-				fmt.Printf("< %s", al[a])
-				if !strings.HasSuffix(al[a], "\n") {
-					fmt.Printf("\n%s\n", NONEWLINE)
-				}
+				print_line(fmt.Sprintf("< %s", al[a]))
 			}
 		} else {
 			fmt.Printf("%sc%s\n", format_range_plain(c.A, c.Del), format_range_plain(c.B, c.Ins))
 			for a := c.A; a < c.A+c.Del; a++ {
-				fmt.Printf("< %s", al[a])
-				if !strings.HasSuffix(al[a], "\n") {
-					fmt.Printf("\n%s\n", NONEWLINE)
-				}
+				print_line(fmt.Sprintf("< %s", al[a]))
 			}
 			fmt.Printf("---\n")
 			for b := c.B; b < c.B+c.Ins; b++ {
-				fmt.Printf("> %s", bl[b])
-				if !strings.HasSuffix(bl[b], "\n") {
-					fmt.Printf("\n%s\n", NONEWLINE)
-				}
+				print_line(fmt.Sprintf("> %s", bl[b]))
 			}
 		}
 	}
@@ -214,27 +202,18 @@ func print_context_diff(cl []diff.Change, al []string, bl []string, apath string
 			a := astart
 			for _, c := range cl[cstart : cend+1] {
 				for ; a < c.A; a++ {
-					fmt.Printf("  %s", al[a])
-					if !strings.HasSuffix(al[a], "\n") {
-						fmt.Printf("\n%s\n", NONEWLINE)
-					}
+					print_line(fmt.Sprintf("  %s", al[a]))
 				}
 				for ; a < c.A+c.Del; a++ {
 					if c.Ins == 0 {
-						fmt.Printf("- %s", al[a])
+						print_line(fmt.Sprintf("- %s", al[a]))
 					} else {
-						fmt.Printf("! %s", al[a])
-					}
-					if !strings.HasSuffix(al[a], "\n") {
-						fmt.Printf("\n%s\n", NONEWLINE)
+						print_line(fmt.Sprintf("! %s", al[a]))
 					}
 				}
 			}
 			for ; a < astart+acount; a++ {
-				fmt.Printf("  %s", al[a])
-				if !strings.HasSuffix(al[a], "\n") {
-					fmt.Printf("\n%s\n", NONEWLINE)
-				}
+				print_line(fmt.Sprintf("  %s", al[a]))
 			}
 		}
 		fmt.Printf("--- %s ----\n", format_range_context(bstart, bcount))
@@ -242,27 +221,18 @@ func print_context_diff(cl []diff.Change, al []string, bl []string, apath string
 			b := bstart
 			for _, c := range cl[cstart : cend+1] {
 				for ; b < c.B; b++ {
-					fmt.Printf("  %s", bl[b])
-					if !strings.HasSuffix(bl[b], "\n") {
-						fmt.Printf("\n%s\n", NONEWLINE)
-					}
+					print_line(fmt.Sprintf("  %s", bl[b]))
 				}
 				for ; b < c.B+c.Ins; b++ {
 					if c.Del == 0 {
-						fmt.Printf("+ %s", bl[b])
+						print_line(fmt.Sprintf("+ %s", bl[b]))
 					} else {
-						fmt.Printf("! %s", bl[b])
-					}
-					if !strings.HasSuffix(bl[b], "\n") {
-						fmt.Printf("\n%s\n", NONEWLINE)
+						print_line(fmt.Sprintf("! %s", bl[b]))
 					}
 				}
 			}
 			for ; b < bstart+bcount; b++ {
-				fmt.Printf("  %s", bl[b])
-				if !strings.HasSuffix(bl[b], "\n") {
-					fmt.Printf("\n%s\n", NONEWLINE)
-				}
+				print_line(fmt.Sprintf("  %s", bl[b]))
 			}
 		}
 		cstart = cend + 1
@@ -312,29 +282,17 @@ func print_unified_diff(cl []diff.Change, al []string, bl []string, apath string
 		a := astart
 		for _, c := range cl[cstart : cend+1] {
 			for ; a < c.A; a++ {
-				fmt.Printf(" %s", al[a])
-				if !strings.HasSuffix(al[a], "\n") {
-					fmt.Printf("\n%s\n", NONEWLINE)
-				}
+				print_line(fmt.Sprintf(" %s", al[a]))
 			}
 			for ; a < c.A+c.Del; a++ {
-				fmt.Printf("-%s", al[a])
-				if !strings.HasSuffix(al[a], "\n") {
-					fmt.Printf("\n%s\n", NONEWLINE)
-				}
+				print_line(fmt.Sprintf("-%s", al[a]))
 			}
 			for b := c.B; b < c.B+c.Ins; b++ {
-				fmt.Printf("+%s", bl[b])
-				if !strings.HasSuffix(bl[b], "\n") {
-					fmt.Printf("\n%s\n", NONEWLINE)
-				}
+				print_line(fmt.Sprintf("+%s", bl[b]))
 			}
 		}
 		for ; a < astart+acount; a++ {
-			fmt.Printf(" %s", al[a])
-			if !strings.HasSuffix(al[a], "\n") {
-				fmt.Printf("\n%s\n", NONEWLINE)
-			}
+			print_line(fmt.Sprintf(" %s", al[a]))
 		}
 		cstart = cend + 1
 	}
@@ -368,6 +326,13 @@ func format_range_unified(start int, count int) string {
 		return fmt.Sprintf("%d", base+start)
 	} else {
 		return fmt.Sprintf("%d,%d", base+start, count)
+	}
+}
+
+func print_line(line string) {
+	fmt.Print(line)
+	if !strings.HasSuffix(line, "\n") {
+		fmt.Printf("\n%s\n", NONEWLINE)
 	}
 }
 
