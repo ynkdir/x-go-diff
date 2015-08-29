@@ -1,0 +1,17 @@
+diff -utc diff_test/test48_a/a.txt diff_test/test48_b/a.txt
+2c2
+< b
+---
+> x
+Only in diff_test/test48_a: d11
+Only in diff_test/test48_b: d22
+Common subdirectories: diff_test/test48_a/dx and diff_test/test48_b/dx
+File diff_test/test48_a/dy is a regular file while file diff_test/test48_b/dy is a directory
+File diff_test/test48_a/dz is a directory while file diff_test/test48_b/dz is a regular file
+Only in diff_test/test48_a: f2
+Only in diff_test/test48_b: f3
+diff -utc diff_test/test48_a/x.txt diff_test/test48_b/x.txt
+3c3
+< c
+---
+> x

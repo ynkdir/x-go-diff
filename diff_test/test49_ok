@@ -1,0 +1,18 @@
+diff -utc -r diff_test/test49_a/a.txt diff_test/test49_b/a.txt
+2c2
+< b
+---
+> x
+Only in diff_test/test49_a: d11
+Only in diff_test/test49_b: d22
+Only in diff_test/test49_a/dx: h.txt
+Only in diff_test/test49_b/dx: i.txt
+File diff_test/test49_a/dy is a regular file while file diff_test/test49_b/dy is a directory
+File diff_test/test49_a/dz is a directory while file diff_test/test49_b/dz is a regular file
+Only in diff_test/test49_a: f2
+Only in diff_test/test49_b: f3
+diff -utc -r diff_test/test49_a/x.txt diff_test/test49_b/x.txt
+3c3
+< c
+---
+> x

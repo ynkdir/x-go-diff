@@ -187,3 +187,9 @@ func Test46(t *testing.T) {
 func Test47(t *testing.T) {
 	dotest(t, []string{"-b", "diff_test/test47_a", "diff_test/test47_b"}, "diff_test/test47_ok")
 }
+func Test48(t *testing.T) {
+	dotest(t, []string{"diff_test/test48_a", "diff_test/test48_b"}, "diff_test/test48_ok")
+}
+func Test49(t *testing.T) {
+	dotest(t, []string{"-r", "diff_test/test49_a", "diff_test/test49_b"}, "diff_test/test49_ok")
+}

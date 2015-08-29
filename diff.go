@@ -26,7 +26,7 @@ var flag_C = flag.Int("C", 0, "Context diff (specified line context).")
 //var flag_e = flag.Bool("e", false, "Produce output in a form suitable as input for the ed utility, which can then be used to convert file1 into file2.")
 
 //var flag_f = flag.Bool("f", false, "Produce output in an alternative form, similar in format to -e, but not intended to be suitable as input for the ed utility, and in the opposite order.")
-//var flag_r = flag.Bool("r", false, "Apply diff recursively to files and directories of the same name when file1 and file2 are both directories.")
+var flag_r = flag.Bool("r", false, "Compare directory recursively.")
 var flag_u = flag.Bool("u", false, "Unified diff (three line context).")
 var flag_U = flag.Int("U", 0, "Unified diff (specified line context).")
 
@@ -69,19 +69,82 @@ func run(apath string, bpath string) (bool, error) {
 	if ainfo.IsDir() && binfo.IsDir() {
 		return diffdir(apath, bpath)
 	} else if ainfo.IsDir() {
-		return difffile(filepath.Join(apath, binfo.Name()), bpath)
+		return difffile(xjoinpath(apath, binfo.Name()), bpath, "")
 	} else if binfo.IsDir() {
-		return difffile(apath, filepath.Join(bpath, ainfo.Name()))
+		return difffile(apath, xjoinpath(bpath, ainfo.Name()), "")
 	} else {
-		return difffile(apath, bpath)
+		return difffile(apath, bpath, "")
 	}
 }
 
-func diffdir(apath string, bpath string) (bool, error) {
-	return false, fmt.Errorf("NOT IMPLEMENTED")
+func diffdir(adir string, bdir string) (bool, error) {
+	afi, err := readdir(adir)
+	if err != nil {
+		return false, err
+	}
+	bfi, err := readdir(bdir)
+	if err != nil {
+		return false, err
+	}
+	difffound := false
+	a := 0
+	b := 0
+	for a < len(afi) || b < len(bfi) {
+		if a >= len(afi) {
+			fmt.Printf("Only in %s: %s\n", bdir, bfi[b].Name())
+			difffound = true
+			b++
+		} else if b >= len(afi) {
+			fmt.Printf("Only in %s: %s\n", adir, afi[a].Name())
+			difffound = true
+			a++
+		} else if afi[a].Name() < bfi[b].Name() {
+			fmt.Printf("Only in %s: %s\n", adir, afi[a].Name())
+			difffound = true
+			a++
+		} else if afi[a].Name() > bfi[b].Name() {
+			fmt.Printf("Only in %s: %s\n", bdir, bfi[b].Name())
+			difffound = true
+			b++
+		} else {
+			apath := xjoinpath(adir, afi[a].Name())
+			bpath := xjoinpath(bdir, bfi[b].Name())
+			if afi[a].IsDir() && bfi[b].IsDir() {
+				if *flag_r {
+					df, err := diffdir(apath, bpath)
+					if err != nil {
+						return false, err
+					}
+					if df {
+						difffound = true
+					}
+				} else {
+					fmt.Printf("Common subdirectories: %s and %s\n", apath, bpath)
+				}
+			} else if afi[a].IsDir() {
+				fmt.Printf("File %s is a directory while file %s is a regular file\n", apath, bpath)
+				difffound = true
+			} else if bfi[b].IsDir() {
+				fmt.Printf("File %s is a regular file while file %s is a directory\n", apath, bpath)
+				difffound = true
+			} else {
+				head := fmt.Sprintf("%s %s %s\n", reconstructargs(), apath, bpath)
+				df, err := difffile(apath, bpath, head)
+				if err != nil {
+					return false, err
+				}
+				if df {
+					difffound = true
+				}
+			}
+			a++
+			b++
+		}
+	}
+	return difffound, nil
 }
 
-func difffile(apath string, bpath string) (bool, error) {
+func difffile(apath string, bpath string, head string) (bool, error) {
 	al, err := readfile(apath)
 	if err != nil {
 		return false, err
@@ -95,6 +158,10 @@ func difffile(apath string, bpath string) (bool, error) {
 	cl := diff.Strings(cmpfilter(al), cmpfilter(bl))
 	if len(cl) == 0 {
 		return false, nil
+	}
+
+	if head != "" {
+		fmt.Print(head)
 	}
 
 	if hasflag("C") {
@@ -399,4 +466,40 @@ func readfile(path string) ([]string, error) {
 		lines = append(lines, line)
 	}
 	return lines, nil
+}
+
+func readdir(dir string) ([]os.FileInfo, error) {
+	f, err := os.Open(dir)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	return f.Readdir(0)
+}
+
+func reconstructargs() string {
+	name := filepath.Base(os.Args[0])
+	ext := filepath.Ext(name)
+	if ext != "" {
+		name = name[0 : len(name) - len(ext)]
+	}
+	args := []string{name}
+	i := 1
+	for i < len(os.Args) {
+		if os.Args[i] == "-C" || os.Args[i] == "-U" {
+			args = append(args, os.Args[i], os.Args[i + 1])
+			i += 2
+		} else if strings.HasPrefix(os.Args[i], "-") {
+			args = append(args, os.Args[i])
+			i++
+		} else {
+			i++
+		}
+	}
+	return strings.Join(args, " ")
+}
+
+func xjoinpath(dir string, file string) string {
+	dir = strings.TrimRight(dir, string(os.PathSeparator) + "/")
+	return dir + "/" + file
 }
