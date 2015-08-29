@@ -481,13 +481,13 @@ func reconstructargs() string {
 	name := filepath.Base(os.Args[0])
 	ext := filepath.Ext(name)
 	if ext != "" {
-		name = name[0 : len(name) - len(ext)]
+		name = name[0 : len(name)-len(ext)]
 	}
 	args := []string{name}
 	i := 1
 	for i < len(os.Args) {
 		if (os.Args[i] == "-C" || os.Args[i] == "-U") && !strings.Contains(os.Args[i], "=") {
-			args = append(args, os.Args[i], os.Args[i + 1])
+			args = append(args, os.Args[i], os.Args[i+1])
 			i += 2
 		} else if strings.HasPrefix(os.Args[i], "-") {
 			args = append(args, os.Args[i])
@@ -500,6 +500,6 @@ func reconstructargs() string {
 }
 
 func xjoinpath(dir string, file string) string {
-	dir = strings.TrimRight(dir, string(os.PathSeparator) + "/")
+	dir = strings.TrimRight(dir, string(os.PathSeparator)+"/")
 	return dir + "/" + file
 }
