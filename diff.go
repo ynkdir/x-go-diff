@@ -185,7 +185,7 @@ func difffile(apath string, bpath string, head string) (bool, error) {
 			return false, err
 		}
 	} else {
-		print_plain_diff(cl, al, bl)
+		print_normal_diff(cl, al, bl)
 	}
 
 	return true, nil
@@ -207,20 +207,20 @@ func cmpfilter(lines []string) []string {
 	return alt
 }
 
-func print_plain_diff(cl []diff.Change, al []string, bl []string) {
+func print_normal_diff(cl []diff.Change, al []string, bl []string) {
 	for _, c := range cl {
 		if c.Del == 0 {
-			fmt.Printf("%sa%s\n", format_range_plain(c.A, c.Del), format_range_plain(c.B, c.Ins))
+			fmt.Printf("%sa%s\n", format_range_normal(c.A, c.Del), format_range_normal(c.B, c.Ins))
 			for b := c.B; b < c.B+c.Ins; b++ {
 				print_line(fmt.Sprintf("> %s", bl[b]))
 			}
 		} else if c.Ins == 0 {
-			fmt.Printf("%sd%s\n", format_range_plain(c.A, c.Del), format_range_plain(c.B, c.Ins))
+			fmt.Printf("%sd%s\n", format_range_normal(c.A, c.Del), format_range_normal(c.B, c.Ins))
 			for a := c.A; a < c.A+c.Del; a++ {
 				print_line(fmt.Sprintf("< %s", al[a]))
 			}
 		} else {
-			fmt.Printf("%sc%s\n", format_range_plain(c.A, c.Del), format_range_plain(c.B, c.Ins))
+			fmt.Printf("%sc%s\n", format_range_normal(c.A, c.Del), format_range_normal(c.B, c.Ins))
 			for a := c.A; a < c.A+c.Del; a++ {
 				print_line(fmt.Sprintf("< %s", al[a]))
 			}
@@ -232,7 +232,7 @@ func print_plain_diff(cl []diff.Change, al []string, bl []string) {
 	}
 }
 
-func format_range_plain(start int, count int) string {
+func format_range_normal(start int, count int) string {
 	base := 1
 	if count == 0 {
 		return fmt.Sprintf("%d", start)
