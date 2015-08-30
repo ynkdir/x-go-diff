@@ -16,14 +16,13 @@ const EXIT_NO_DIFFERENCE_WERE_FOUND = 0
 const EXIT_DIFFERENCE_WERE_FOUND = 1
 const EXIT_AN_ERROR_OCCURRED = 2
 const CONTEXT_DEFAULT = 3
-const NONEWLINE = "\\ No newline at end of file"
+const NONEWLINE = "No newline at end of file"
 
 //http://pubs.opengroup.org/onlinepubs/9699919799/utilities/diff.html
 var flag_b = flag.Bool("b", false, "Ignore changes in amount of white space.")
 var flag_c = flag.Bool("c", false, "Context diff (three line context).")
 var flag_C = flag.Int("C", 0, "Context diff (specified line context).")
-
-//var flag_e = flag.Bool("e", false, "Produce output in a form suitable as input for the ed utility, which can then be used to convert file1 into file2.")
+var flag_e = flag.Bool("e", false, "Ed script diff.")
 
 //var flag_f = flag.Bool("f", false, "Produce output in an alternative form, similar in format to -e, but not intended to be suitable as input for the ed utility, and in the opposite order.")
 var flag_r = flag.Bool("r", false, "Compare directory recursively.")
@@ -156,39 +155,58 @@ func difffile(apath string, bpath string, head string) (bool, error) {
 	}
 
 	cl := diff.Strings(cmpfilter(al), cmpfilter(bl))
-	if len(cl) == 0 {
-		return false, nil
-	}
 
-	if head != "" {
-		fmt.Print(head)
+	if len(cl) != 0 {
+		if head != "" {
+			fmt.Print(head)
+		}
 	}
 
 	if hasflag("C") {
-		err := print_context_diff(cl, al, bl, apath, bpath, *flag_C)
-		if err != nil {
-			return false, err
+		if len(cl) != 0 {
+			err := print_context_diff(cl, al, bl, apath, bpath, *flag_C)
+			if err != nil {
+				return false, err
+			}
 		}
 	} else if *flag_c {
-		err := print_context_diff(cl, al, bl, apath, bpath, CONTEXT_DEFAULT)
-		if err != nil {
-			return false, err
+		if len(cl) != 0 {
+			err := print_context_diff(cl, al, bl, apath, bpath, CONTEXT_DEFAULT)
+			if err != nil {
+				return false, err
+			}
 		}
 	} else if hasflag("U") {
-		err := print_unified_diff(cl, al, bl, apath, bpath, *flag_U)
-		if err != nil {
-			return false, err
+		if len(cl) != 0 {
+			err := print_unified_diff(cl, al, bl, apath, bpath, *flag_U)
+			if err != nil {
+				return false, err
+			}
 		}
 	} else if *flag_u {
-		err := print_unified_diff(cl, al, bl, apath, bpath, CONTEXT_DEFAULT)
-		if err != nil {
-			return false, err
+		if len(cl) != 0 {
+			err := print_unified_diff(cl, al, bl, apath, bpath, CONTEXT_DEFAULT)
+			if err != nil {
+				return false, err
+			}
+		}
+	} else if *flag_e {
+		if len(cl) != 0 {
+			print_ed_diff(cl, al, bl)
+		}
+		if len(al) != 0 && !strings.HasSuffix(al[len(al)-1], "\n") {
+			fmt.Fprintf(os.Stderr, "%s: %s: %s\n\n", cmdname(), apath, NONEWLINE)
+		}
+		if len(bl) != 0 && !strings.HasSuffix(bl[len(bl)-1], "\n") {
+			fmt.Fprintf(os.Stderr, "%s: %s: %s\n\n", cmdname(), bpath, NONEWLINE)
 		}
 	} else {
-		print_normal_diff(cl, al, bl)
+		if len(cl) != 0 {
+			print_normal_diff(cl, al, bl)
+		}
 	}
 
-	return true, nil
+	return len(cl) != 0, nil
 }
 
 func cmpfilter(lines []string) []string {
@@ -233,6 +251,44 @@ func print_normal_diff(cl []diff.Change, al []string, bl []string) {
 }
 
 func format_range_normal(start int, count int) string {
+	base := 1
+	if count == 0 {
+		return fmt.Sprintf("%d", start)
+	} else if count == 1 {
+		return fmt.Sprintf("%d", base+start)
+	} else {
+		return fmt.Sprintf("%d,%d", base+start, base+start+count-1)
+	}
+}
+
+func print_ed_diff(cl []diff.Change, al []string, bl []string) {
+	for i := len(cl) - 1; i >= 0; i-- {
+		c := cl[i]
+		if c.Del == 0 {
+			fmt.Printf("%sa\n", format_range_ed(c.A, c.Del))
+			for b := c.B; b < c.B+c.Ins; b++ {
+				fmt.Printf("%s", bl[b])
+				if !strings.HasSuffix(bl[b], "\n") {
+					fmt.Printf("\n")
+				}
+			}
+			fmt.Printf(".\n")
+		} else if c.Ins == 0 {
+			fmt.Printf("%sd\n", format_range_ed(c.A, c.Del))
+		} else {
+			fmt.Printf("%sc\n", format_range_ed(c.A, c.Del))
+			for b := c.B; b < c.B+c.Ins; b++ {
+				fmt.Printf("%s", bl[b])
+				if !strings.HasSuffix(bl[b], "\n") {
+					fmt.Printf("\n")
+				}
+			}
+			fmt.Printf(".\n")
+		}
+	}
+}
+
+func format_range_ed(start int, count int) string {
 	base := 1
 	if count == 0 {
 		return fmt.Sprintf("%d", start)
@@ -397,7 +453,7 @@ func format_range_unified(start int, count int) string {
 func print_line(line string) {
 	fmt.Print(line)
 	if !strings.HasSuffix(line, "\n") {
-		fmt.Printf("\n%s\n", NONEWLINE)
+		fmt.Printf("\n\\ %s\n", NONEWLINE)
 	}
 }
 
@@ -478,12 +534,7 @@ func readdir(dir string) ([]os.FileInfo, error) {
 }
 
 func reconstructargs() string {
-	name := filepath.Base(os.Args[0])
-	ext := filepath.Ext(name)
-	if ext != "" {
-		name = name[0 : len(name)-len(ext)]
-	}
-	args := []string{name}
+	args := []string{cmdname()}
 	i := 1
 	for i < len(os.Args) {
 		if (os.Args[i] == "-C" || os.Args[i] == "-U") && !strings.Contains(os.Args[i], "=") {
@@ -497,6 +548,15 @@ func reconstructargs() string {
 		}
 	}
 	return strings.Join(args, " ")
+}
+
+func cmdname() string {
+	name := filepath.Base(os.Args[0])
+	ext := filepath.Ext(name)
+	if ext != "" {
+		name = name[0 : len(name)-len(ext)]
+	}
+	return name
 }
 
 func xjoinpath(dir string, file string) string {
