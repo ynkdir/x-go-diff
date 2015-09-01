@@ -23,8 +23,7 @@ var flag_b = flag.Bool("b", false, "Ignore changes in amount of white space.")
 var flag_c = flag.Bool("c", false, "Context diff (three line context).")
 var flag_C = flag.Int("C", 0, "Context diff (specified line context).")
 var flag_e = flag.Bool("e", false, "Ed script diff.")
-
-//var flag_f = flag.Bool("f", false, "Produce output in an alternative form, similar in format to -e, but not intended to be suitable as input for the ed utility, and in the opposite order.")
+var flag_f = flag.Bool("f", false, "Alternative form of ed script diff.")
 var flag_r = flag.Bool("r", false, "Compare directory recursively.")
 var flag_u = flag.Bool("u", false, "Unified diff (three line context).")
 var flag_U = flag.Int("U", 0, "Unified diff (specified line context).")
@@ -200,6 +199,16 @@ func difffile(apath string, bpath string, head string) (bool, error) {
 		if len(bl) != 0 && !strings.HasSuffix(bl[len(bl)-1], "\n") {
 			fmt.Fprintf(os.Stderr, "%s: %s: %s\n\n", cmdname(), bpath, NONEWLINE)
 		}
+	} else if *flag_f {
+		if len(cl) != 0 {
+			print_alt_ed_diff(cl, al, bl)
+		}
+		if len(al) != 0 && !strings.HasSuffix(al[len(al)-1], "\n") {
+			fmt.Fprintf(os.Stderr, "%s: %s: %s\n\n", cmdname(), apath, NONEWLINE)
+		}
+		if len(bl) != 0 && !strings.HasSuffix(bl[len(bl)-1], "\n") {
+			fmt.Fprintf(os.Stderr, "%s: %s: %s\n\n", cmdname(), bpath, NONEWLINE)
+		}
 	} else {
 		if len(cl) != 0 {
 			print_normal_diff(cl, al, bl)
@@ -296,6 +305,43 @@ func format_range_ed(start int, count int) string {
 		return fmt.Sprintf("%d", base+start)
 	} else {
 		return fmt.Sprintf("%d,%d", base+start, base+start+count-1)
+	}
+}
+
+func print_alt_ed_diff(cl []diff.Change, al []string, bl []string) {
+	for _, c := range cl {
+		if c.Del == 0 {
+			fmt.Printf("a%s\n", format_range_alt_ed(c.A, c.Del))
+			for b := c.B; b < c.B+c.Ins; b++ {
+				fmt.Printf("%s", bl[b])
+				if !strings.HasSuffix(bl[b], "\n") {
+					fmt.Printf("\n")
+				}
+			}
+			fmt.Printf(".\n")
+		} else if c.Ins == 0 {
+			fmt.Printf("d%s\n", format_range_alt_ed(c.A, c.Del))
+		} else {
+			fmt.Printf("c%s\n", format_range_alt_ed(c.A, c.Del))
+			for b := c.B; b < c.B+c.Ins; b++ {
+				fmt.Printf("%s", bl[b])
+				if !strings.HasSuffix(bl[b], "\n") {
+					fmt.Printf("\n")
+				}
+			}
+			fmt.Printf(".\n")
+		}
+	}
+}
+
+func format_range_alt_ed(start int, count int) string {
+	base := 1
+	if count == 0 {
+		return fmt.Sprintf("%d", start)
+	} else if count == 1 {
+		return fmt.Sprintf("%d", base+start)
+	} else {
+		return fmt.Sprintf("%d %d", base+start, base+start+count-1)
 	}
 }
 
