@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
 )
 
 const EXIT_NO_DIFFERENCE_WERE_FOUND = 0
@@ -54,22 +55,26 @@ func main() {
 }
 
 func run(apath string, bpath string) (bool, error) {
-	ainfo, err := os.Stat(apath)
+	if apath == "-" && bpath == "-" {
+		return false, nil
+	}
+
+	aisdir, err := isdir(apath)
 	if err != nil {
 		return false, err
 	}
 
-	binfo, err := os.Stat(bpath)
+	bisdir, err := isdir(bpath)
 	if err != nil {
 		return false, err
 	}
 
-	if ainfo.IsDir() && binfo.IsDir() {
+	if aisdir && bisdir {
 		return diffdir(apath, bpath)
-	} else if ainfo.IsDir() {
-		return difffile(xjoinpath(apath, binfo.Name()), bpath, "")
-	} else if binfo.IsDir() {
-		return difffile(apath, xjoinpath(bpath, ainfo.Name()), "")
+	} else if aisdir {
+		return difffile(xjoinpath(apath, filepath.Base(bpath)), bpath, "")
+	} else if bisdir {
+		return difffile(apath, xjoinpath(bpath, filepath.Base(apath)), "")
 	} else {
 		return difffile(apath, bpath, "")
 	}
@@ -408,20 +413,20 @@ func print_context_diff(cl []diff.Change, al []string, bl []string, apath string
 }
 
 func print_context_head(apath string, bpath string) error {
-	as, err := os.Stat(apath)
+	amodtime, err := fmodtime(apath)
 	if err != nil {
 		return err
 	}
-	bs, err := os.Stat(bpath)
+	bmodtime, err := fmodtime(bpath)
 	if err != nil {
 		return err
 	}
 	if *flag_utc {
-		fmt.Printf("*** %s\t%s\n", apath, as.ModTime().UTC().Format("Mon Jan _2 15:04:05 2006"))
-		fmt.Printf("--- %s\t%s\n", bpath, bs.ModTime().UTC().Format("Mon Jan _2 15:04:05 2006"))
+		fmt.Printf("*** %s\t%s\n", apath, amodtime.UTC().Format("Mon Jan _2 15:04:05 2006"))
+		fmt.Printf("--- %s\t%s\n", bpath, bmodtime.UTC().Format("Mon Jan _2 15:04:05 2006"))
 	} else {
-		fmt.Printf("*** %s\t%s\n", apath, as.ModTime().Format("Mon Jan _2 15:04:05 2006"))
-		fmt.Printf("--- %s\t%s\n", bpath, bs.ModTime().Format("Mon Jan _2 15:04:05 2006"))
+		fmt.Printf("*** %s\t%s\n", apath, amodtime.Format("Mon Jan _2 15:04:05 2006"))
+		fmt.Printf("--- %s\t%s\n", bpath, bmodtime.Format("Mon Jan _2 15:04:05 2006"))
 	}
 	return nil
 }
@@ -467,20 +472,20 @@ func print_unified_diff(cl []diff.Change, al []string, bl []string, apath string
 }
 
 func print_unified_head(apath string, bpath string) error {
-	as, err := os.Stat(apath)
+	amodtime, err := fmodtime(apath)
 	if err != nil {
 		return err
 	}
-	bs, err := os.Stat(bpath)
+	bmodtime, err := fmodtime(bpath)
 	if err != nil {
 		return err
 	}
 	if *flag_utc {
-		fmt.Printf("--- %s\t%s\n", apath, as.ModTime().UTC().Format("2006-01-02 15:04:05.000000000 -0700"))
-		fmt.Printf("+++ %s\t%s\n", bpath, bs.ModTime().UTC().Format("2006-01-02 15:04:05.000000000 -0700"))
+		fmt.Printf("--- %s\t%s\n", apath, amodtime.UTC().Format("2006-01-02 15:04:05.000000000 -0700"))
+		fmt.Printf("+++ %s\t%s\n", bpath, bmodtime.UTC().Format("2006-01-02 15:04:05.000000000 -0700"))
 	} else {
-		fmt.Printf("--- %s\t%s\n", apath, as.ModTime().Format("2006-01-02 15:04:05.000000000 -0700"))
-		fmt.Printf("+++ %s\t%s\n", bpath, bs.ModTime().Format("2006-01-02 15:04:05.000000000 -0700"))
+		fmt.Printf("--- %s\t%s\n", apath, amodtime.Format("2006-01-02 15:04:05.000000000 -0700"))
+		fmt.Printf("+++ %s\t%s\n", bpath, bmodtime.Format("2006-01-02 15:04:05.000000000 -0700"))
 	}
 	return nil
 }
@@ -547,13 +552,19 @@ func make_hunk(cl []diff.Change, cstart int, alen int, blen int, context int) (c
 }
 
 func readfile(path string) ([]string, error) {
-	f, err := os.Open(path)
-	if err != nil {
-		return nil, err
+	var fin *os.File
+	if path == "-" {
+		fin = os.Stdin
+	} else {
+		f, err := os.Open(path)
+		if err != nil {
+			return nil, err
+		}
+		defer f.Close()
+		fin = f
 	}
-	defer f.Close()
 	var lines []string
-	r := bufio.NewReader(f)
+	r := bufio.NewReader(fin)
 	for {
 		line, err := r.ReadString('\n')
 		if err != nil {
@@ -608,4 +619,26 @@ func cmdname() string {
 func xjoinpath(dir string, file string) string {
 	dir = strings.TrimRight(dir, string(os.PathSeparator)+"/")
 	return dir + "/" + file
+}
+
+func isdir(path string) (bool, error) {
+	if path == "-" {
+		return false, nil
+	}
+	fi, err := os.Stat(path)
+	if err != nil {
+		return false, err
+	}
+	return fi.IsDir(), nil
+}
+
+func fmodtime(path string) (time.Time, error) {
+	if path == "-" {
+		return time.Now(), nil
+	}
+	fi, err := os.Stat(path)
+	if err != nil {
+		return time.Time{}, err
+	}
+	return fi.ModTime(), nil
 }

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"io"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -31,6 +32,39 @@ func init() {
 
 func dotest(t *testing.T, args []string, okfile string, exitcode bool) {
 	cmd := exec.Command(CMDNAME, append([]string{"-utc"}, args...)...)
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		if _, ok := err.(*exec.ExitError); !ok {
+			t.Fatal(err)
+		}
+	}
+	cmdexitcode := (err == nil)
+	ok, err := ioutil.ReadFile(okfile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(out, ok) {
+		t.Errorf("error: result mismatch:\nRESULT:\n%s\nEXPECTED:\n%s", string(out), string(ok))
+	} else if cmdexitcode != exitcode {
+		t.Errorf("error: exitcode mismatch:\nRESULT:\n%v\nEXPECTED:\n%v", cmdexitcode, exitcode)
+	}
+}
+
+func dotestin(t *testing.T, args []string, infile string, okfile string, exitcode bool) {
+	cmd := exec.Command(CMDNAME, append([]string{"-utc"}, args...)...)
+	stdin, err := cmd.StdinPipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	fin, err := os.Open(infile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = io.Copy(stdin, fin)
+	if err != nil {
+		t.Fatal(err)
+	}
+	stdin.Close()
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		if _, ok := err.(*exec.ExitError); !ok {
@@ -213,4 +247,19 @@ func Test54(t *testing.T) {
 }
 func Test55(t *testing.T) {
 	dotest(t, []string{"-f", "diff_test/test55_a", "diff_test/test55_b"}, "diff_test/test55_ok", true)
+}
+func Test56(t *testing.T) {
+	dotestin(t, []string{"-", "diff_test/test56_b"}, "diff_test/test56_a", "diff_test/test56_ok", true)
+}
+func Test57(t *testing.T) {
+	dotestin(t, []string{"diff_test/test57_a", "-"}, "diff_test/test57_b", "diff_test/test57_ok", true)
+}
+func Test58(t *testing.T) {
+	dotestin(t, []string{"-", "-"}, "diff_test/test58_a", "diff_test/test58_ok", true)
+}
+func Test59(t *testing.T) {
+	dotestin(t, []string{"-", "diff_test/test59_b"}, "diff_test/test59_a", "diff_test/test59_ok", false)
+}
+func Test60(t *testing.T) {
+	dotestin(t, []string{"diff_test/test60_a", "-"}, "diff_test/test60_b", "diff_test/test60_ok", false)
 }
