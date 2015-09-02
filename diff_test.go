@@ -263,3 +263,6 @@ func Test59(t *testing.T) {
 func Test60(t *testing.T) {
 	dotestin(t, []string{"diff_test/test60_a", "-"}, "diff_test/test60_b", "diff_test/test60_ok", false)
 }
+func Test61(t *testing.T) {
+	dotest(t, []string{"diff_test/test61_a", "-"}, "diff_test/test61_ok", false)
+}

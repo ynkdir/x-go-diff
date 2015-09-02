@@ -43,7 +43,7 @@ func main() {
 
 	difffound, err := run(flag.Arg(0), flag.Arg(1))
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		print_error(fmt.Sprintf("%s", err))
 		os.Exit(EXIT_AN_ERROR_OCCURRED)
 	}
 
@@ -67,6 +67,10 @@ func run(apath string, bpath string) (bool, error) {
 	bisdir, err := isdir(bpath)
 	if err != nil {
 		return false, err
+	}
+
+	if (apath == "-" && bisdir) || (bpath == "-" && aisdir) {
+		return false, fmt.Errorf("%s", "cannot compare '-' to a directory")
 	}
 
 	if aisdir && bisdir {
@@ -199,20 +203,20 @@ func difffile(apath string, bpath string, head string) (bool, error) {
 			print_ed_diff(cl, al, bl)
 		}
 		if len(al) != 0 && !strings.HasSuffix(al[len(al)-1], "\n") {
-			fmt.Fprintf(os.Stderr, "%s: %s: %s\n\n", cmdname(), apath, NONEWLINE)
+			print_error(fmt.Sprintf("%s: %s\n", apath, NONEWLINE))
 		}
 		if len(bl) != 0 && !strings.HasSuffix(bl[len(bl)-1], "\n") {
-			fmt.Fprintf(os.Stderr, "%s: %s: %s\n\n", cmdname(), bpath, NONEWLINE)
+			print_error(fmt.Sprintf("%s: %s\n", bpath, NONEWLINE))
 		}
 	} else if *flag_f {
 		if len(cl) != 0 {
 			print_alt_ed_diff(cl, al, bl)
 		}
 		if len(al) != 0 && !strings.HasSuffix(al[len(al)-1], "\n") {
-			fmt.Fprintf(os.Stderr, "%s: %s: %s\n\n", cmdname(), apath, NONEWLINE)
+			print_error(fmt.Sprintf("%s: %s\n", apath, NONEWLINE))
 		}
 		if len(bl) != 0 && !strings.HasSuffix(bl[len(bl)-1], "\n") {
-			fmt.Fprintf(os.Stderr, "%s: %s: %s\n\n", cmdname(), bpath, NONEWLINE)
+			print_error(fmt.Sprintf("%s: %s\n", bpath, NONEWLINE))
 		}
 	} else {
 		if len(cl) != 0 {
@@ -641,4 +645,8 @@ func fmodtime(path string) (time.Time, error) {
 		return time.Time{}, err
 	}
 	return fi.ModTime(), nil
+}
+
+func print_error(s string) {
+	fmt.Fprintf(os.Stderr, "%s: %s\n", cmdname(), s)
 }
