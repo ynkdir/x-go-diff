@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"diff/patiencediff"
 	"flag"
 	"fmt"
 	"github.com/hattya/go.diff"
@@ -30,6 +31,8 @@ var flag_u = flag.Bool("u", false, "Unified diff (three line context).")
 var flag_U = flag.Int("U", 0, "Unified diff (specified line context).")
 
 var flag_i = flag.Bool("i", false, "Ignore changes in case of text.")
+
+var flag_patience = flag.Bool("patience", false, "Patience Diff.")
 
 var flag_utc = flag.Bool("utc", false, "Print time in UTC (for test)")
 
@@ -162,7 +165,12 @@ func difffile(apath string, bpath string, head string) (bool, error) {
 		return false, err
 	}
 
-	cl := diff.Strings(cmpfilter(al), cmpfilter(bl))
+	var cl []diff.Change
+	if *flag_patience {
+		cl = patiencediff.Strings(cmpfilter(al), cmpfilter(bl))
+	} else {
+		cl = diff.Strings(cmpfilter(al), cmpfilter(bl))
+	}
 
 	if len(cl) != 0 {
 		if head != "" {
