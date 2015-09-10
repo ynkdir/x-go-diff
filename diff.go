@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"diff/histogramdiff"
 	"diff/patiencediff"
 	"flag"
 	"fmt"
@@ -33,6 +34,7 @@ var flag_U = flag.Int("U", 0, "Unified diff (specified line context).")
 var flag_i = flag.Bool("i", false, "Ignore changes in case of text.")
 
 var flag_patience = flag.Bool("patience", false, "Patience Diff.")
+var flag_histogram = flag.Bool("histogram", false, "Histogram Diff.")
 
 var flag_utc = flag.Bool("utc", false, "Print time in UTC (for test)")
 
@@ -166,7 +168,9 @@ func difffile(apath string, bpath string, head string) (bool, error) {
 	}
 
 	var cl []diff.Change
-	if *flag_patience {
+	if *flag_histogram {
+		cl = histogramdiff.Strings(cmpfilter(al), cmpfilter(bl))
+	} else if *flag_patience {
 		cl = patiencediff.Strings(cmpfilter(al), cmpfilter(bl))
 	} else {
 		cl = diff.Strings(cmpfilter(al), cmpfilter(bl))
