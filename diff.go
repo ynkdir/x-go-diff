@@ -167,14 +167,18 @@ func difffile(apath string, bpath string, head string) (bool, error) {
 		return false, err
 	}
 
+	acmp := cmpfilter(al)
+	bcmp := cmpfilter(bl)
+
 	var cl []diff.Change
 	if *flag_histogram {
-		cl = histogramdiff.Strings(cmpfilter(al), cmpfilter(bl))
+		cl = histogramdiff.Strings(acmp, bcmp)
 	} else if *flag_patience {
-		cl = patiencediff.Strings(cmpfilter(al), cmpfilter(bl))
+		cl = patiencediff.Strings(acmp, bcmp)
 	} else {
-		cl = diff.Strings(cmpfilter(al), cmpfilter(bl))
+		cl = diff.Strings(acmp, bcmp)
 	}
+	cl = change_compact(cl, acmp, bcmp)
 
 	if len(cl) != 0 {
 		if head != "" {
@@ -661,4 +665,119 @@ func fmodtime(path string) (time.Time, error) {
 
 func print_error(s string) {
 	fmt.Fprintf(os.Stderr, "%s: %s\n", cmdname(), s)
+}
+
+// Move back and forward change groups for a consistent and pretty diff output.
+func change_compact(cl []diff.Change, al []string, bl []string) []diff.Change {
+	ad, bd := change_to_diff(cl, al, bl)
+	ad = change_compact_sub(ad, al)
+	bd = change_compact_sub(bd, bl)
+	return diff_to_change(ad, bd)
+}
+
+func change_to_diff(cl []diff.Change, al []string, bl []string) ([]int, []int) {
+	ad := []int{}
+	bd := []int{}
+	a := 0
+	b := 0
+	for _, c := range cl {
+		for a < c.A {
+			ad = append(ad, 0)
+			a++
+		}
+		for a < c.A + c.Del {
+			ad = append(ad, -1)
+			a++
+		}
+		for b < c.B {
+			bd = append(bd, 0)
+			b++
+		}
+		for b < c.B + c.Ins {
+			bd = append(bd, 1)
+			b++
+		}
+	}
+	for a < len(al) {
+		ad = append(ad, 0)
+		a++
+	}
+	for b < len(bl) {
+		bd = append(bd, 0)
+		b++
+	}
+	return ad, bd
+}
+
+func diff_to_change(ad []int, bd []int) []diff.Change {
+	cl := []diff.Change{}
+	a := 0
+	b := 0
+	for a < len(ad) && b < len(bd) {
+		if ad[a] == 0 && bd[b] == 0 {
+			a++
+			b++
+		} else {
+			c := diff.Change{}
+			c.A = a
+			c.B = b
+			for a < len(ad) && ad[a] != 0 {
+				a++
+			}
+			for b < len(bd) && bd[b] != 0 {
+				b++
+			}
+			c.Del = a - c.A
+			c.Ins = b - c.B
+			cl = append(cl, c)
+		}
+	}
+	if a < len(ad) {
+		cl = append(cl, diff.Change{A: a, B: b, Del: len(ad) - a, Ins: 0})
+	}
+	if b < len(bd) {
+		cl = append(cl, diff.Change{A: a, B: b, Del: 0, Ins: len(bd) - b})
+	}
+	return cl
+}
+
+func change_compact_sub(df []int, lines []string) []int {
+	i := 0
+	for i < len(df) {
+		for i < len(df) && df[i] == 0 {
+			i++
+		}
+		s := i
+		for i < len(df) && df[i] != 0 {
+			i++
+		}
+		e := i
+		if s == e {
+			break
+		}
+		start := s
+		end := e
+		for 0 < s && lines[s - 1] == lines[e - 1] {
+			df[s - 1] = df[e - 1]
+			df[e - 1] = 0
+			e--
+			for 0 < s && df[s - 1] != 0 {
+				s--
+			}
+		}
+		for e < len(lines) && lines[s] == lines[e] {
+			df[e] = df[s]
+			df[s] = 0
+			s++
+			for e < len(df) && df[e] != 0 {
+				e++
+			}
+		}
+		if start != s || end != e {
+			i = s
+		} else {
+			i = e
+		}
+	}
+	return df
 }
