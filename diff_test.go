@@ -266,3 +266,15 @@ func Test60(t *testing.T) {
 func Test61(t *testing.T) {
 	dotest(t, []string{"diff_test/test61_a", "-"}, "diff_test/test61_ok", false)
 }
+func Test62(t *testing.T) {
+	dotest(t, []string{"-u", "-patience", "diff_test/test62_a", "diff_test/test62_b"}, "diff_test/test62_ok", false)
+}
+func Test63(t *testing.T) {
+	dotest(t, []string{"-u", "-patience", "diff_test/test63_a", "diff_test/test63_b"}, "diff_test/test63_ok", false)
+}
+func Test64(t *testing.T) {
+	dotest(t, []string{"-u", "-histogram", "diff_test/test64_a", "diff_test/test64_b"}, "diff_test/test64_ok", false)
+}
+func Test65(t *testing.T) {
+	dotest(t, []string{"-u", "-histogram", "diff_test/test65_a", "diff_test/test65_b"}, "diff_test/test65_ok", false)
+}
